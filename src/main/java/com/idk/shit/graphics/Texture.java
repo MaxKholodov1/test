@@ -5,22 +5,13 @@ import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.BufferUtils;
-
-import static org.lwjgl.opengl.GL11.glBegin;
-import static org.lwjgl.opengl.GL11.glEnd;
-import static org.lwjgl.opengl.GL11.glVertex2f;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-
-
-
-
 public class Texture {
-    private int textureID;
+    private final int textureID;
 
     public Texture(String path) {
         textureID = loadTexture(path);
@@ -74,22 +65,8 @@ public class Texture {
         STBImage.stbi_image_free(image);
         return id;
     }
-
-    public void bind() {
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
-    }
-
-    public void unbind() {
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-    }
-
     public void cleanup() {
         GL11.glDeleteTextures(textureID);
-    }
-
-    public int getTextureID() {
-        return textureID;
     }
 
     public void draw(float x, float y, float width, float height) {

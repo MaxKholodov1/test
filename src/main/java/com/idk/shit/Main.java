@@ -8,11 +8,8 @@ import org.lwjgl.nanovg.NanoVGGL3;
 import org.lwjgl.opengl.GL;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
-
-import com.idk.shit.game.state.State;
-import com.idk.shit.game.state.ValueObjects.Implementations.Plays.Play;
+import com.idk.shit.game.state.StateManager;
 import com.idk.shit.game.views.ViewManager;
-import com.idk.shit.game.views.view.ApplicationView;
 import com.idk.shit.game.views.view.Implementations.MenuView;
 import com.idk.shit.utils.InputManager;
 import com.idk.shit.graphics.Texture;
@@ -20,20 +17,23 @@ import com.idk.shit.graphics.TextureCache;
 import com.idk.shit.ui.TextRenderer;
 import com.idk.shit.utils.ScoreManager;
 
-
 public class Main {
     private long window;
     private ViewManager viewManager;
-    protected InputManager inputManager; // Создаем InputManager
-    protected  int screen_width=650;
-    protected  int screen_height=1000;
-    protected float RATIO;
+    protected InputManager inputManager;
+    protected int screenWidth = 650;
+    protected int screenHeight = 1000;
+    protected float ratio;
     protected MenuView menuView;
-    protected State state;
+    protected StateManager stateManager;
     protected long vg;
-    Texture background, playerTexture, blockTexture;
-    TextRenderer textRenderer;
-    ScoreManager scoreManager;
+    private Texture playerTexture, blockTexture;
+    private TextRenderer textRenderer;
+    private ScoreManager scoreManager;
+
+    // Переменные для управления временем
+    private long lastFrameTime;
+    private final long NANOSECONDS_PER_FRAME = 1_000_000_000L / 60; // 60 FPS
 
     public void run() {
         System.out.println("Hello, LWJGL " + Version.getVersion() + "!");
@@ -42,14 +42,13 @@ public class Main {
         loop();
 
         // Освобождение ресурсов окна и завершение GLFW
-        // glfwFreeCallbacks(window);
         glfwDestroyWindow(window);
         glfwTerminate();
         glfwSetErrorCallback(null).free();
     }
 
     private void init() {
-        // Устанавливаем обработчик ошибок GLFW, ошибки будут выводиться в System.err
+        // Устанавливаем обработчик ошибок GLFW
         GLFWErrorCallback.createPrint(System.err).set();
 
         // Инициализация GLFW
@@ -57,69 +56,90 @@ public class Main {
             throw new IllegalStateException("Не удалось инициализировать GLFW");
 
         // Настройки GLFW
-        glfwDefaultWindowHints(); // Устанавливаем параметры окна по умолчанию
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Окно сначала будет скрыто
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // Разрешаем изменение размера окна
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         // Создание окна
-        this.window = glfwCreateWindow(screen_width, screen_height, "jump", NULL, NULL);
-        this.inputManager = new InputManager();
-        inputManager.registerCallbacks(window);
+        this.window = glfwCreateWindow(screenWidth, screenHeight, "Jump", NULL, NULL);
         if (window == NULL)
             throw new RuntimeException("Ошибка создания окна GLFW");
 
+        this.inputManager = new InputManager();
+        inputManager.registerCallbacks(window);
+
         // Устанавливаем текущий контекст OpenGL
         glfwMakeContextCurrent(window);
-        // Включаем вертикальную синхронизацию (V-Sync)
-        glfwSwapInterval(1);
-        // Отображаем окно
+        glfwSwapInterval(1); // Включаем вертикальную синхронизацию (V-Sync)
         glfwShowWindow(window);
         GL.createCapabilities();
-        RATIO=(float)screen_width/(float)screen_height;
+
+        ratio = (float) screenWidth / (float) screenHeight;
         glMatrixMode(GL_PROJECTION);
-        glOrtho(-RATIO, RATIO, -1, 1, -1, 1);
+        glOrtho(-ratio, ratio, -1, 1, -1, 1);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        // shader = new Shader("vertex_shader.glsl", "fragment_shader.glsl");
+
+        // Инициализация NanoVG
         vg = NanoVGGL3.nvgCreate(NanoVG.NVG_ALIGN_BASELINE);
         textRenderer = new TextRenderer(vg);
+
+        // Инициализация менеджера рекордов
         scoreManager = new ScoreManager("scores.txt");
-        System.out.println(scoreManager.getHighScore(1));
+        System.out.println("High Score: " + scoreManager.getHighScore(1));
+
+        // Загрузка текстур
         playerTexture = TextureCache.getTexture("pngegg.png");
         blockTexture = TextureCache.getTexture("трава.png");
-        state =new State(inputManager, scoreManager);
-        viewManager = new ViewManager(window, inputManager, state, vg, textRenderer, scoreManager);
-        menuView =new MenuView (state, window, inputManager, vg, textRenderer, scoreManager);
-        viewManager.setState(menuView);
 
+        // Инициализация состояния игры и менеджера представлений
+        stateManager = new StateManager(inputManager, scoreManager);
+        viewManager = new ViewManager(window, inputManager, stateManager, vg, textRenderer, scoreManager);
+        menuView = new MenuView(stateManager, window, inputManager, vg, textRenderer, scoreManager);
+        viewManager.setState(menuView);
     }
 
     private void loop() {
-        
-        // Загружаем функции OpenGL
         GL.createCapabilities();
+        glClearColor(1.0f, 1.0f, 1.0f, 0.0f); // Устанавливаем цвет очистки экрана (белый фон)
 
-        // Устанавливаем цвет очистки экрана (белый фон)
-        glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+        // Инициализация времени
+        lastFrameTime = System.nanoTime();
 
         // Основной цикл рендеринга
         while (!glfwWindowShouldClose(window)) {
-            // Очищаем буфер цвета и глубины
+            // Очистка буферов
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            // Обновляем и рендерим игру
-            state.update();
+
+            // Обновление и рендеринг
+            stateManager.update();
             viewManager.update();
             viewManager.render();
-            // Меняем буферы экрана (двойная буферизация)
+
+            // Обмен буферов
             glfwSwapBuffers(window);
 
-            // Обрабатываем события (например, нажатия клавиш)
+            // Обработка событий
             glfwPollEvents();
+
+            // Управление временем для фиксированного FPS
+            long currentTime = System.nanoTime();
+            long elapsedTime = currentTime - lastFrameTime;
+
+            if (elapsedTime < NANOSECONDS_PER_FRAME) {
+                long sleepTime = (NANOSECONDS_PER_FRAME - elapsedTime) / 1_000_000; // Переводим в миллисекунды
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            lastFrameTime = currentTime;
         }
     }
 
     public static void main(String[] args) {
-         
         new Main().run();
     }
 }

@@ -1,9 +1,9 @@
 package com.idk.shit.game.state.ValueObjects.Implementations.Plays.Levels;
 import com.idk.shit.game.state.ValueObjects.Implementations.Plays.Play;
-import com.idk.shit.objects.Meteor;
-import com.idk.shit.objects.Object;
-import com.idk.shit.objects.Player;
-import com.idk.shit.objects.PrevMeteor;
+import com.idk.shit.game.state.ValueObjects.objects.Meteor;
+import com.idk.shit.game.state.ValueObjects.objects.Object;
+import com.idk.shit.game.state.ValueObjects.objects.Player;
+import com.idk.shit.game.state.ValueObjects.objects.PrevMeteor;
 import com.idk.shit.utils.Colours;
 import com.idk.shit.utils.InputManager;
 import com.idk.shit.utils.rand;
@@ -15,27 +15,27 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 
 public class Level2 extends Play{
-    private Deque<com.idk.shit.objects.Object> blocks = new ArrayDeque<>();
-    private Deque<com.idk.shit.objects.Object> supposed_blocks = new ArrayDeque<>();
-    private Deque<Meteor> meteors = new ArrayDeque<>();
-    private Deque<PrevMeteor> prevmeteors = new ArrayDeque<>();
+    private final Deque<Object> blocks = new ArrayDeque<>();
+    private final Deque<Object> supposed_blocks = new ArrayDeque<>();
+    private final Deque<Meteor> meteors = new ArrayDeque<>();
+    private final Deque<PrevMeteor> prevmeteors = new ArrayDeque<>();
 
     public float screen_height=1000;
     public float screen_width=650;
-    public float RATIO = (float)screen_width/(float)screen_height;
-    private float block_height = 0.045f;
-    private float block_width = 0.25f;
+    public float RATIO = screen_width / screen_height;
+    private final float block_height = 0.045f;
+    private final float block_width = 0.25f;
     private Player player;
-    private com.idk.shit.objects.Object block;
+    private Object block;
     private Meteor meteor;
     private PrevMeteor prevmeteor;
 
-    private float speed_player_x = 0.035f;
-    private float max_speed_y = 0.05f;
-    private float accel_y = -0.002f;
+    private final float speed_player_x = 0.035f;
+    private final float max_speed_y = 0.05f;
+    private final float accel_y = -0.002f;
     private int score = 0;
-    private float max_height = -max_speed_y * max_speed_y / (2 * accel_y) - max_speed_y;
-    private InputManager inputManager;
+    private final float max_height = -max_speed_y * max_speed_y / (2 * accel_y) - max_speed_y;
+    private final InputManager inputManager;
     public Level2(InputManager inputManager) {
         this.inputManager = inputManager;
         initGame();
@@ -49,9 +49,9 @@ public class Level2 extends Play{
         int speed_dir= randomizer.rand(new int[]{-1, 1}, new int[]{1, 1});
         float cloudx;
         if (res == 1) {
-            block = new com.idk.shit.objects.Object(x, y, block_width, block_height, 0.006f*speed_dir, Colours.CYAN);
+            block = new Object(x, y, block_width, block_height, 0.006f*speed_dir, Colours.CYAN);
         } else {
-            block = new com.idk.shit.objects.Object(x, y, block_width, block_height, 0.0f, Colours.PURPLE);
+            block = new Object(x, y, block_width, block_height, 0.0f, Colours.PURPLE);
         }
         blocks.addLast(block);
         supposed_blocks.addLast(block);
@@ -61,7 +61,7 @@ public class Level2 extends Play{
             float xm = randomizer.rand_x(left, right);
             meteor =new Meteor(xm, 2.3f, 0.075f, 0.075f, 0, Colours.BLACK);
             meteors.addLast(meteor);
-            cloudx= (float)randomizer.rand_x(xm-(float)(0.075/2), (float)(xm+0.075/2));
+            cloudx= randomizer.rand_x(xm-(float)(0.075/2), (float)(xm+0.075/2));
             prevmeteor = new PrevMeteor(cloudx, 0.9f, 0.5f, 0.16f, 0, Colours.BLACK);
             prevmeteors.addLast(prevmeteor);
         }
@@ -84,7 +84,7 @@ public class Level2 extends Play{
 
     @Override
     public void  update() {
-                if (inputManager.isKeyPressed(GLFW_KEY_LEFT) && !inputManager.isKeyPressed(GLFW_KEY_RIGHT) ) {
+        if (inputManager.isKeyPressed(GLFW_KEY_LEFT) && !inputManager.isKeyPressed(GLFW_KEY_RIGHT) ) {
             player.update_object(-speed_player_x);
         } else if (inputManager.isKeyPressed(GLFW_KEY_RIGHT) && !inputManager.isKeyPressed(GLFW_KEY_LEFT)) {
             player.update_object(speed_player_x);
@@ -100,13 +100,13 @@ public class Level2 extends Play{
             prevmeteor.update_object(0f);
         }//обновление prevметеоров
 
-        for (com.idk.shit.objects.Object block : supposed_blocks) {
+        for (Object block : supposed_blocks) {
             float block_speed_x = block.getSpeed_x();
             block.update_object(block_speed_x);
         }// обновление блоков
 
         if (player.getY() > -0.1f) {
-            for (com.idk.shit.objects.Object block : supposed_blocks) {
+            for (Object block : supposed_blocks) {
                 block.SetY(block.getY()-(player.getY()-(-0.1f)));
             }
             for (Meteor meteor : meteors) {
@@ -115,8 +115,8 @@ public class Level2 extends Play{
             player.SetY(-0.1f);//обновлении позиций для бесконечного цикла
         }
 
-        for (Iterator<com.idk.shit.objects.Object> iterator = blocks.iterator(); iterator.hasNext(); ) {
-            com.idk.shit.objects.Object block = iterator.next();
+        for (Iterator<Object> iterator = blocks.iterator(); iterator.hasNext(); ) {
+            Object block = iterator.next();
             if (block.getY() < -1) {
                 iterator.remove();
             }
@@ -136,8 +136,8 @@ public class Level2 extends Play{
         }
 
         int cnt = 0;
-        for (Iterator<com.idk.shit.objects.Object> iterator = supposed_blocks.iterator(); iterator.hasNext(); ) {
-            com.idk.shit.objects.Object block = iterator.next();
+        for (Iterator<Object> iterator = supposed_blocks.iterator(); iterator.hasNext(); ) {
+            Object block = iterator.next();
             if (block.getY() < -1) {
                 cnt++;
                 score++;
@@ -155,7 +155,7 @@ public class Level2 extends Play{
             AddBlock(left, right, b, a, score);
         }
 
-        for (com.idk.shit.objects.Object block : blocks) {
+        for (Object block : blocks) {
             if ("UP"==block.collision(player)){
                 player.change_speed();
                 player.SetY(block.getTop()+player.height()/2);
